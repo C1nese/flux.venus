@@ -1,0 +1,13 @@
+{
+  "name": "bsc-contract-monitor",
+  "version": "1.0.0",
+  "description": "BSC contract event monitor with SSE streaming",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "ethers": "^6.9.0"
+  }
+}
