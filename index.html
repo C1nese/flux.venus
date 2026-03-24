@@ -1,794 +1,609 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BSC 合约事件监控</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>flux.venus | Vercel Webhook Monitor</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: rgba(11, 16, 32, 0.72);
+      --panel-border: rgba(255, 255, 255, 0.08);
+      --text: #f3f7ff;
+      --muted: #9aa8c7;
+      --green: #2ecc71;
+      --red: #ff6b6b;
+      --blue: #56b6ff;
+      --amber: #ffc857;
+      --shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+    }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 15px;
-            margin: 0;
-        }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-        .container {
-            max-width: 1600px;
-            margin: 0 auto;
-            display: flex;
-            flex-direction: column;
-            height: calc(100vh - 30px);
-        }
+    body {
+      min-height: 100vh;
+      padding: 24px;
+      color: var(--text);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(86, 182, 255, 0.25), transparent 32%),
+        radial-gradient(circle at top right, rgba(255, 200, 87, 0.2), transparent 28%),
+        linear-gradient(145deg, #07101f 0%, #16233f 48%, #0f172a 100%);
+    }
 
-        h1 {
-            color: white;
-            text-align: center;
-            margin: 0 0 15px 0;
-            font-size: 1.8em;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-        }
+    .shell {
+      max-width: 1440px;
+      margin: 0 auto;
+      display: grid;
+      gap: 18px;
+    }
 
-        .top-bar {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 15px;
-            flex-shrink: 0;
-        }
+    .hero,
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+    }
 
-        .filters-container {
-            background: white;
-            border-radius: 12px;
-            padding: 15px 20px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            flex: 1;
-        }
+    .hero {
+      padding: 28px;
+      display: grid;
+      gap: 12px;
+    }
 
-        .filters-header {
-            font-size: 0.9em;
-            font-weight: bold;
-            margin-bottom: 10px;
-            color: #333;
-        }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(86, 182, 255, 0.12);
+      color: #b9e3ff;
+      font-size: 13px;
+      letter-spacing: 0.04em;
+    }
 
-        .filter-group {
-            display: flex;
-            gap: 20px;
-            flex-wrap: wrap;
-        }
+    h1 {
+      font-size: clamp(30px, 5vw, 54px);
+      line-height: 1.02;
+      letter-spacing: -0.03em;
+    }
 
-        .filter-item {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            cursor: pointer;
-        }
+    .hero p {
+      color: var(--muted);
+      max-width: 900px;
+      line-height: 1.7;
+      font-size: 16px;
+    }
 
-        .filter-item input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-        }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap: 18px;
+    }
 
-        .filter-item label {
-            font-size: 0.9em;
-            color: #333;
-            cursor: pointer;
-            user-select: none;
-        }
+    .status-panel {
+      grid-column: span 4;
+      padding: 22px;
+      display: grid;
+      gap: 12px;
+    }
 
-        .stats-container {
-            display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            gap: 10px;
-            flex-shrink: 0;
-        }
+    .stats-panel {
+      grid-column: span 8;
+      padding: 22px;
+    }
 
-        .stat-card {
-            background: white;
-            border-radius: 10px;
-            padding: 12px 15px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            transition: transform 0.3s ease;
-        }
+    .panel-title {
+      font-size: 14px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
 
-        .stat-card:hover {
-            transform: translateY(-3px);
-        }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      width: fit-content;
+      padding: 10px 14px;
+      border-radius: 999px;
+      font-weight: 600;
+    }
 
-        .stat-label {
-            font-size: 0.75em;
-            color: #666;
-            margin-bottom: 6px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
+    .status-pill::before {
+      content: "";
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: currentColor;
+      box-shadow: 0 0 18px currentColor;
+    }
 
-        .stat-value {
-            font-size: 1.3em;
-            font-weight: bold;
-            color: #333;
-        }
+    .status-pill.ok {
+      color: #7ef0b3;
+      background: rgba(46, 204, 113, 0.12);
+    }
 
-        .stat-card.deposit .stat-value {
-            color: #10b981;
-        }
+    .status-pill.warn {
+      color: #ffd27e;
+      background: rgba(255, 200, 87, 0.12);
+    }
 
-        .stat-card.withdraw .stat-value {
-            color: #ef4444;
-        }
+    .status-pill.error {
+      color: #ff9c9c;
+      background: rgba(255, 107, 107, 0.12);
+    }
 
-        .stat-card .token-indicator {
-            font-size: 0.7em;
-            color: #999;
-            margin-top: 3px;
-        }
+    .meta-list {
+      display: grid;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 14px;
+    }
 
-        .events-container {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            overflow: hidden;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            min-height: 0;
-        }
+    .meta-list strong {
+      color: var(--text);
+      font-weight: 600;
+      margin-left: 8px;
+    }
 
-        .events-header {
-            font-size: 1.2em;
-            font-weight: bold;
-            margin-bottom: 12px;
-            color: #333;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-shrink: 0;
-        }
+    .stat-grid {
+      margin-top: 16px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
 
-        .events-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            overflow-x: auto;
-            display: block;
-            flex: 1;
-            overflow-y: auto;
-        }
+    .stat-card {
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.03);
+      padding: 18px;
+      display: grid;
+      gap: 6px;
+    }
 
-        .events-table thead {
-            position: sticky;
-            top: 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            z-index: 10;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
+    .stat-card small {
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
 
-        .events-table th {
-            padding: 12px 15px;
-            text-align: left;
-            font-weight: 700;
-            color: white;
-            text-transform: uppercase;
-            font-size: 0.75em;
-            letter-spacing: 0.5px;
-            border: none;
-        }
+    .stat-card strong {
+      font-size: clamp(22px, 3vw, 30px);
+    }
 
-        .events-table th:first-child {
-            border-radius: 12px 0 0 0;
-        }
+    .filters {
+      grid-column: span 12;
+      padding: 18px 22px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 18px;
+      align-items: center;
+    }
 
-        .events-table th:last-child {
-            border-radius: 0 12px 0 0;
-        }
+    .filters label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      cursor: pointer;
+      user-select: none;
+    }
 
-        .events-table td {
-            padding: 12px 15px;
-            border-bottom: 1px solid #f0f0f0;
-            background: white;
-            transition: all 0.2s ease;
-            font-size: 0.9em;
-        }
+    .filters input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--blue);
+    }
 
-        .events-table tbody tr {
-            transition: all 0.2s ease;
-        }
+    .events {
+      grid-column: span 12;
+      padding: 22px;
+      overflow: hidden;
+    }
 
-        .events-table tbody tr:hover {
-            background: linear-gradient(90deg, #f8f9ff 0%, #ffffff 100%);
-            transform: translateX(4px);
-            box-shadow: -4px 0 0 0 #667eea;
-        }
+    .events-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      gap: 16px;
+    }
 
-        .events-table tbody tr:last-child td:first-child {
-            border-radius: 0 0 0 12px;
-        }
+    .events-head p {
+      color: var(--muted);
+      font-size: 14px;
+    }
 
-        .events-table tbody tr:last-child td:last-child {
-            border-radius: 0 0 12px 0;
-        }
+    .table-wrap {
+      overflow: auto;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
 
-        .event-type {
-            display: inline-block;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 0.75em;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 980px;
+      background: rgba(6, 10, 20, 0.4);
+    }
 
-        .event-type.deposit {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: white;
-        }
+    thead {
+      background: rgba(255, 255, 255, 0.04);
+    }
 
-        .event-type.withdraw {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-            color: white;
-        }
+    th,
+    td {
+      padding: 14px 16px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: 14px;
+    }
 
-        .event-type.transfer {
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-            color: white;
-        }
+    th {
+      color: #dce7ff;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
 
-        .address {
-            font-family: 'Courier New', monospace;
-            font-size: 0.9em;
-            cursor: pointer;
-            color: #667eea;
-            transition: all 0.3s ease;
-            position: relative;
-            padding: 4px 8px;
-            border-radius: 6px;
-            display: inline-block;
-        }
+    td {
+      color: var(--muted);
+    }
 
-        .address:hover {
-            background: #f0f4ff;
-            color: #764ba2;
-            transform: translateY(-2px);
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-        }
+    tbody tr:hover {
+      background: rgba(255, 255, 255, 0.03);
+    }
 
-        .address.copied::after {
-            content: '✓ 已复制';
-            position: absolute;
-            left: 50%;
-            transform: translateX(-50%);
-            bottom: -30px;
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: white;
-            padding: 6px 12px;
-            border-radius: 8px;
-            font-size: 0.85em;
-            white-space: nowrap;
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
-            animation: fadeOut 2s forwards;
-            z-index: 100;
-        }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
 
-        @keyframes fadeOut {
-            0% { opacity: 1; }
-            70% { opacity: 1; }
-            100% { opacity: 0; }
-        }
+    .badge.usdc {
+      color: #b7d9ff;
+      background: rgba(86, 182, 255, 0.16);
+    }
 
-        .amount {
-            font-weight: 700;
-            font-size: 1.05em;
-            font-family: 'Courier New', monospace;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
-        }
+    .badge.fusdt {
+      color: #ffe6a4;
+      background: rgba(255, 200, 87, 0.16);
+    }
 
-        .amount.deposit {
-            color: #10b981;
-        }
+    .badge.deposit {
+      color: #7ef0b3;
+      background: rgba(46, 204, 113, 0.14);
+    }
 
-        .amount.withdraw {
-            color: #ef4444;
-        }
+    .badge.withdraw {
+      color: #ffb0b0;
+      background: rgba(255, 107, 107, 0.14);
+    }
 
-        .amount.transfer {
-            color: #3b82f6;
-        }
+    .badge.transfer {
+      color: #aeddff;
+      background: rgba(86, 182, 255, 0.14);
+    }
 
-        .timestamp {
-            color: #6b7280;
-            font-size: 0.9em;
-        }
+    .mono {
+      font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+      color: var(--text);
+    }
 
-        .status {
-            text-align: center;
-            padding: 12px;
-            color: #666;
-            font-style: italic;
-            font-size: 0.9em;
-        }
+    .link {
+      color: #8ad2ff;
+      text-decoration: none;
+    }
 
-        .status.connected {
-            color: #10b981;
-        }
+    .empty {
+      padding: 26px;
+      text-align: center;
+      color: var(--muted);
+    }
 
-        .status.error {
-            color: #ef4444;
-        }
+    .good {
+      color: var(--green);
+    }
 
-        .tx-hash {
-            font-family: 'Courier New', monospace;
-            font-size: 0.85em;
-            color: #667eea;
-            padding: 4px 8px;
-            border-radius: 6px;
-            transition: all 0.3s ease;
-            display: inline-block;
-        }
+    .bad {
+      color: var(--red);
+    }
 
-        .tx-hash a {
-            color: inherit;
-            text-decoration: none;
-            transition: all 0.3s ease;
-        }
+    @media (max-width: 980px) {
+      body {
+        padding: 16px;
+      }
 
-        .tx-hash:hover {
-            background: #f0f4ff;
-            transform: translateY(-2px);
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-        }
+      .status-panel,
+      .stats-panel,
+      .filters,
+      .events {
+        grid-column: span 12;
+      }
 
-        .tx-hash a:hover {
-            color: #764ba2;
-        }
+      .stat-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
 
-        .timestamp {
-            color: #6b7280;
-            font-size: 0.9em;
-            font-weight: 500;
-        }
+    @media (max-width: 640px) {
+      .hero,
+      .panel {
+        border-radius: 18px;
+      }
 
-        .filters-container {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
-
-        .filters-header {
-            font-size: 1.2em;
-            font-weight: bold;
-            margin-bottom: 15px;
-            color: #333;
-        }
-
-        .filter-group {
-            display: flex;
-            gap: 30px;
-            flex-wrap: wrap;
-        }
-
-        .filter-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-        }
-
-        .filter-item input[type="checkbox"] {
-            width: 20px;
-            height: 20px;
-            cursor: pointer;
-        }
-
-        .filter-item label {
-            font-size: 1em;
-            color: #333;
-            cursor: pointer;
-            user-select: none;
-        }
-
-        .token-badge {
-            display: inline-block;
-            padding: 5px 10px;
-            border-radius: 14px;
-            font-size: 0.7em;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.12);
-        }
-
-        .token-badge.usdc {
-            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-            color: white;
-        }
-
-        .token-badge.fusdt {
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            color: white;
-        }
-
-        .stat-card .token-indicator {
-            font-size: 0.8em;
-            color: #999;
-            margin-top: 5px;
-        }
-    </style>
+      .stat-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🔍 BSC 合约事件监控</h1>
-        
-        <div class="top-bar">
-            <div class="filters-container">
-                <div class="filters-header">筛选器</div>
-                <div class="filter-group">
-                    <div class="filter-item">
-                        <input type="checkbox" id="filterUSDC" checked>
-                        <label for="filterUSDC">USDC</label>
-                    </div>
-                    <div class="filter-item">
-                        <input type="checkbox" id="filterFUSDT" checked>
-                        <label for="filterFUSDT">FUSDT</label>
-                    </div>
-                    <div class="filter-item">
-                        <input type="checkbox" id="filterTransfer" checked>
-                        <label for="filterTransfer">Transfer</label>
-                    </div>
-                    <div class="filter-item">
-                        <input type="checkbox" id="filterDeposit" checked>
-                        <label for="filterDeposit">Deposit</label>
-                    </div>
-                    <div class="filter-item">
-                        <input type="checkbox" id="filterWithdraw" checked>
-                        <label for="filterWithdraw">Withdraw</label>
-                    </div>
-                </div>
-            </div>
+  <main class="shell">
+    <section class="hero">
+      <span class="eyebrow">Webhook-first architecture for Vercel</span>
+      <h1>flux.venus 已改成适合 Vercel 的事件面板</h1>
+      <p>
+        这版不再依赖常驻 WebSocket、SSE 和进程内内存。链上监听应由 Alchemy、Moralis
+        或其他 webhook provider 常驻执行，它们把事件 POST 到 <span class="mono">/api/webhook</span>，
+        页面再定时轮询 <span class="mono">/api/state</span> 读取持久化结果。
+      </p>
+    </section>
+
+    <section class="grid">
+      <section class="panel status-panel">
+        <div class="panel-title">运行状态</div>
+        <div id="statusPill" class="status-pill warn">正在检查</div>
+        <div class="meta-list">
+          <div>存储模式<strong id="storageMode">-</strong></div>
+          <div>最近 webhook<strong id="lastWebhookAt">-</strong></div>
+          <div>最近刷新<strong id="lastRefreshAt">-</strong></div>
+          <div>事件总数<strong id="totalStoredEvents">0</strong></div>
         </div>
+      </section>
 
-        <div class="stats-container">
-            <div class="stat-card deposit">
-                <div class="stat-label">USDC 存款</div>
-                <div class="stat-value" id="usdcTotalDeposit">0.00</div>
-                <div class="token-indicator">USDC</div>
-            </div>
-            <div class="stat-card withdraw">
-                <div class="stat-label">USDC 取款</div>
-                <div class="stat-value" id="usdcTotalWithdraw">0.00</div>
-                <div class="token-indicator">USDC</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">USDC 净流入</div>
-                <div class="stat-value" id="usdcNetFlow">0.00</div>
-                <div class="token-indicator">USDC</div>
-            </div>
-            <div class="stat-card deposit">
-                <div class="stat-label">FUSDT 存款</div>
-                <div class="stat-value" id="fusdtTotalDeposit">0.00</div>
-                <div class="token-indicator">FUSDT</div>
-            </div>
-            <div class="stat-card withdraw">
-                <div class="stat-label">FUSDT 取款</div>
-                <div class="stat-value" id="fusdtTotalWithdraw">0.00</div>
-                <div class="token-indicator">FUSDT</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">FUSDT 净流入</div>
-                <div class="stat-value" id="fusdtNetFlow">0.00</div>
-                <div class="token-indicator">FUSDT</div>
-            </div>
+      <section class="panel stats-panel">
+        <div class="panel-title">统计总览</div>
+        <div class="stat-grid">
+          <article class="stat-card">
+            <small>USDC Deposit</small>
+            <strong id="usdcDeposit">0.00</strong>
+          </article>
+          <article class="stat-card">
+            <small>USDC Withdraw</small>
+            <strong id="usdcWithdraw">0.00</strong>
+          </article>
+          <article class="stat-card">
+            <small>USDC Net Flow</small>
+            <strong id="usdcNet">0.00</strong>
+          </article>
+          <article class="stat-card">
+            <small>FUSDT Deposit</small>
+            <strong id="fusdtDeposit">0.00</strong>
+          </article>
+          <article class="stat-card">
+            <small>FUSDT Withdraw</small>
+            <strong id="fusdtWithdraw">0.00</strong>
+          </article>
+          <article class="stat-card">
+            <small>FUSDT Net Flow</small>
+            <strong id="fusdtNet">0.00</strong>
+          </article>
         </div>
+      </section>
 
-        <div class="events-container">
-            <div class="events-header">
-                <span>实时事件</span>
-                <span id="status" class="status">连接中...</span>
-            </div>
-            <table class="events-table">
-                <thead>
-                    <tr>
-                        <th>代币</th>
-                        <th>类型</th>
-                        <th>交易者地址</th>
-                        <th>金额</th>
-                        <th>链上时间</th>
-                        <th>本地时间</th>
-                        <th>延迟</th>
-                        <th>交易哈希</th>
-                    </tr>
-                </thead>
-                <tbody id="eventsBody">
-                </tbody>
-            </table>
+      <section class="panel filters">
+        <label><input type="checkbox" id="filterUSDC" checked /> USDC</label>
+        <label><input type="checkbox" id="filterFUSDT" checked /> FUSDT</label>
+        <label><input type="checkbox" id="filterTransfer" checked /> Transfer</label>
+        <label><input type="checkbox" id="filterDeposit" checked /> Deposit</label>
+        <label><input type="checkbox" id="filterWithdraw" checked /> Withdraw</label>
+      </section>
+
+      <section class="panel events">
+        <div class="events-head">
+          <div>
+            <div class="panel-title">最近事件</div>
+            <p>最新事件会在下一次轮询时出现。默认每 5 秒刷新一次。</p>
+          </div>
+          <p id="sourceLabel">来源: -</p>
         </div>
-    </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Token</th>
+                <th>Type</th>
+                <th>Address</th>
+                <th>Amount</th>
+                <th>Shares</th>
+                <th>Block Time</th>
+                <th>Receive Time</th>
+                <th>Tx Hash</th>
+              </tr>
+            </thead>
+            <tbody id="eventsBody">
+              <tr><td colspan="8" class="empty">等待 webhook 推送事件...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+  </main>
 
-    <script>
-        const eventsBody = document.getElementById('eventsBody');
-        const statusDiv = document.getElementById('status');
-        
-        // USDC stats elements
-        const usdcTotalDepositEl = document.getElementById('usdcTotalDeposit');
-        const usdcTotalWithdrawEl = document.getElementById('usdcTotalWithdraw');
-        const usdcNetFlowEl = document.getElementById('usdcNetFlow');
-        
-        // FUSDT stats elements
-        const fusdtTotalDepositEl = document.getElementById('fusdtTotalDeposit');
-        const fusdtTotalWithdrawEl = document.getElementById('fusdtTotalWithdraw');
-        const fusdtNetFlowEl = document.getElementById('fusdtNetFlow');
-        
-        // Filter checkboxes
-        const filterUSDC = document.getElementById('filterUSDC');
-        const filterFUSDT = document.getElementById('filterFUSDT');
-        const filterTransfer = document.getElementById('filterTransfer');
-        const filterDeposit = document.getElementById('filterDeposit');
-        const filterWithdraw = document.getElementById('filterWithdraw');
+  <script>
+    const REFRESH_INTERVAL_MS = 5000;
 
-        let eventSource;
+    const eventsBody = document.getElementById("eventsBody");
+    const statusPill = document.getElementById("statusPill");
+    const storageModeEl = document.getElementById("storageMode");
+    const lastWebhookAtEl = document.getElementById("lastWebhookAt");
+    const lastRefreshAtEl = document.getElementById("lastRefreshAt");
+    const totalStoredEventsEl = document.getElementById("totalStoredEvents");
+    const sourceLabel = document.getElementById("sourceLabel");
 
-        function formatNumber(num) {
-            return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 });
+    const statEls = {
+      usdcDeposit: document.getElementById("usdcDeposit"),
+      usdcWithdraw: document.getElementById("usdcWithdraw"),
+      usdcNet: document.getElementById("usdcNet"),
+      fusdtDeposit: document.getElementById("fusdtDeposit"),
+      fusdtWithdraw: document.getElementById("fusdtWithdraw"),
+      fusdtNet: document.getElementById("fusdtNet"),
+    };
+
+    const filters = {
+      usdc: document.getElementById("filterUSDC"),
+      fusdt: document.getElementById("filterFUSDT"),
+      transfer: document.getElementById("filterTransfer"),
+      deposit: document.getElementById("filterDeposit"),
+      withdraw: document.getElementById("filterWithdraw"),
+    };
+
+    function formatNumber(value) {
+      return Number(value || 0).toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 6,
+      });
+    }
+
+    function formatTime(value) {
+      if (!value) return "-";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return "-";
+      return date.toLocaleString("zh-CN", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
+    }
+
+    function shortHash(value) {
+      if (!value || value.length < 12) return value || "-";
+      return `${value.slice(0, 8)}...${value.slice(-6)}`;
+    }
+
+    function currentFiltersAllow(event) {
+      const tokenAllowed =
+        (event.tokenType === "USDC" && filters.usdc.checked) ||
+        (event.tokenType === "FUSDT" && filters.fusdt.checked);
+      const typeAllowed =
+        (event.eventType === "TRANSFER" && filters.transfer.checked) ||
+        (event.eventType === "DEPOSIT" && filters.deposit.checked) ||
+        (event.eventType === "WITHDRAW" && filters.withdraw.checked);
+
+      return tokenAllowed && typeAllowed;
+    }
+
+    function setStatus(kind, text) {
+      statusPill.className = `status-pill ${kind}`;
+      statusPill.textContent = text;
+    }
+
+    function renderStats(stats) {
+      const usdcNet = (stats.usdc?.totalDeposit || 0) - (stats.usdc?.totalWithdraw || 0);
+      const fusdtNet = (stats.fusdt?.totalDeposit || 0) - (stats.fusdt?.totalWithdraw || 0);
+
+      statEls.usdcDeposit.textContent = formatNumber(stats.usdc?.totalDeposit);
+      statEls.usdcWithdraw.textContent = formatNumber(stats.usdc?.totalWithdraw);
+      statEls.usdcNet.textContent = formatNumber(usdcNet);
+      statEls.usdcNet.className = usdcNet >= 0 ? "good" : "bad";
+
+      statEls.fusdtDeposit.textContent = formatNumber(stats.fusdt?.totalDeposit);
+      statEls.fusdtWithdraw.textContent = formatNumber(stats.fusdt?.totalWithdraw);
+      statEls.fusdtNet.textContent = formatNumber(fusdtNet);
+      statEls.fusdtNet.className = fusdtNet >= 0 ? "good" : "bad";
+    }
+
+    function renderEvents(events) {
+      const filtered = events.filter(currentFiltersAllow);
+
+      if (filtered.length === 0) {
+        eventsBody.innerHTML = '<tr><td colspan="8" class="empty">当前过滤条件下没有事件。</td></tr>';
+        return;
+      }
+
+      eventsBody.innerHTML = filtered
+        .map((event) => {
+          const tokenClass = event.tokenType.toLowerCase();
+          const typeClass = event.eventType.toLowerCase();
+          const address = event.eventType === "TRANSFER" && event.from && event.to
+            ? `${shortHash(event.from)} -> ${shortHash(event.to)}`
+            : shortHash(event.address);
+          const shares = event.shares ? formatNumber(event.shares) : "-";
+          const txHash = event.txHash
+            ? `<a class="link mono" href="https://bscscan.com/tx/${event.txHash}" target="_blank" rel="noreferrer">${shortHash(event.txHash)}</a>`
+            : "-";
+
+          return `
+            <tr>
+              <td><span class="badge ${tokenClass}">${event.tokenType}</span></td>
+              <td><span class="badge ${typeClass}">${event.eventType}</span></td>
+              <td class="mono">${address}</td>
+              <td class="mono">${formatNumber(event.amount)}</td>
+              <td class="mono">${shares}</td>
+              <td>${formatTime(event.timestamp)}</td>
+              <td>${formatTime(event.receivedAt)}</td>
+              <td>${txHash}</td>
+            </tr>
+          `;
+        })
+        .join("");
+    }
+
+    async function refreshState() {
+      try {
+        const response = await fetch("/api/state", { cache: "no-store" });
+        const payload = await response.json();
+
+        if (!response.ok || !payload.ok) {
+          throw new Error(payload.error || "State request failed");
         }
 
-        function formatTimestamp(isoString) {
-            const date = new Date(isoString);
-            return date.toLocaleString('zh-CN', { 
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            });
+        renderStats(payload.stats || {});
+        renderEvents(payload.events || []);
+
+        storageModeEl.textContent = payload.meta?.storageMode || "-";
+        lastWebhookAtEl.textContent = formatTime(payload.meta?.lastWebhookAt);
+        lastRefreshAtEl.textContent = formatTime(new Date().toISOString());
+        totalStoredEventsEl.textContent = payload.meta?.totalStoredEvents || 0;
+        sourceLabel.textContent = `来源: ${payload.meta?.lastSource || "-"}`;
+
+        if (payload.meta?.storageMode === "unconfigured") {
+          setStatus("warn", "未配置外部存储");
+        } else {
+          setStatus("ok", "运行正常");
         }
+      } catch (error) {
+        setStatus("error", "拉取状态失败");
+        lastRefreshAtEl.textContent = formatTime(new Date().toISOString());
+        console.error(error);
+      }
+    }
 
-        function shortenAddress(address) {
-            return `${address.slice(0, 6)}...${address.slice(-4)}`;
-        }
+    Object.values(filters).forEach((input) => {
+      input.addEventListener("change", refreshState);
+    });
 
-        function copyToClipboard(text, element) {
-            navigator.clipboard.writeText(text).then(() => {
-                element.classList.add('copied');
-                setTimeout(() => {
-                    element.classList.remove('copied');
-                }, 2000);
-            }).catch(err => {
-                console.error('复制失败:', err);
-            });
-        }
-
-        function updateStats(stats) {
-            // Update USDC stats
-            usdcTotalDepositEl.textContent = formatNumber(stats.usdc.totalDeposit);
-            usdcTotalWithdrawEl.textContent = formatNumber(stats.usdc.totalWithdraw);
-            const usdcNetFlow = stats.usdc.totalDeposit - stats.usdc.totalWithdraw;
-            usdcNetFlowEl.textContent = formatNumber(usdcNetFlow);
-            usdcNetFlowEl.style.color = usdcNetFlow >= 0 ? '#10b981' : '#ef4444';
-            
-            // Update FUSDT stats
-            fusdtTotalDepositEl.textContent = formatNumber(stats.fusdt.totalDeposit);
-            fusdtTotalWithdrawEl.textContent = formatNumber(stats.fusdt.totalWithdraw);
-            const fusdtNetFlow = stats.fusdt.totalDeposit - stats.fusdt.totalWithdraw;
-            fusdtNetFlowEl.textContent = formatNumber(fusdtNetFlow);
-            fusdtNetFlowEl.style.color = fusdtNetFlow >= 0 ? '#10b981' : '#ef4444';
-        }
-
-        function applyFilters() {
-            const showUSDC = filterUSDC.checked;
-            const showFUSDT = filterFUSDT.checked;
-            const showTransfer = filterTransfer.checked;
-            const showDeposit = filterDeposit.checked;
-            const showWithdraw = filterWithdraw.checked;
-            
-            Array.from(eventsBody.children).forEach(row => {
-                const tokenType = row.dataset.tokenType;
-                const eventType = row.dataset.eventType;
-                
-                // Check token filter
-                const tokenMatch = (tokenType === 'USDC' && showUSDC) || (tokenType === 'FUSDT' && showFUSDT);
-                
-                // Check event type filter
-                const eventMatch = (eventType === 'Transfer' && showTransfer) || 
-                                   (eventType === 'Deposit' && showDeposit) || 
-                                   (eventType === 'Withdraw' && showWithdraw);
-                
-                row.style.display = (tokenMatch && eventMatch) ? '' : 'none';
-            });
-        }
-
-        function addEvent(eventData, skipFilter = false) {
-            const row = document.createElement('tr');
-            row.dataset.tokenType = eventData.tokenType;
-            row.dataset.eventType = eventData.eventType;
-            
-            // Token badge cell
-            const tokenCell = document.createElement('td');
-            const tokenBadge = document.createElement('span');
-            tokenBadge.className = `token-badge ${eventData.tokenType.toLowerCase()}`;
-            tokenBadge.textContent = eventData.tokenType;
-            tokenCell.appendChild(tokenBadge);
-            
-            // Event type cell
-            const typeCell = document.createElement('td');
-            const typeSpan = document.createElement('span');
-            typeSpan.className = `event-type ${eventData.eventType.toLowerCase()}`;
-            typeSpan.textContent = eventData.eventType;
-            typeCell.appendChild(typeSpan);
-            
-            // Address cell - show from->to for Transfer, otherwise just address
-            const addressCell = document.createElement('td');
-            const addressSpan = document.createElement('span');
-            addressSpan.className = 'address';
-            
-            if (eventData.eventType === 'Transfer') {
-                // Show from -> to for Transfer events
-                const fromShort = shortenAddress(eventData.from);
-                const toShort = shortenAddress(eventData.to);
-                addressSpan.innerHTML = `<span title="${eventData.from}" style="cursor:pointer" onclick="copyToClipboard('${eventData.from}', this)">${fromShort}</span> → <span title="${eventData.to}" style="cursor:pointer" onclick="copyToClipboard('${eventData.to}', this)">${toShort}</span>`;
-            } else {
-                addressSpan.textContent = shortenAddress(eventData.address);
-                addressSpan.title = eventData.address;
-                addressSpan.onclick = function() {
-                    copyToClipboard(eventData.address, this);
-                };
-            }
-            addressCell.appendChild(addressSpan);
-            
-            // Amount cell
-            const amountCell = document.createElement('td');
-            const amountSpan = document.createElement('span');
-            amountSpan.className = `amount ${eventData.eventType.toLowerCase()}`;
-            amountSpan.textContent = formatNumber(eventData.amount);
-            amountCell.appendChild(amountSpan);
-            
-            // Blockchain time cell
-            const blockTimeCell = document.createElement('td');
-            const blockTimeSpan = document.createElement('span');
-            blockTimeSpan.className = 'timestamp';
-            blockTimeSpan.textContent = formatTimestamp(eventData.timestamp);
-            blockTimeSpan.title = '链上时间';
-            blockTimeCell.appendChild(blockTimeSpan);
-            
-            // Local receive time cell
-            const localTimeCell = document.createElement('td');
-            const localTimeSpan = document.createElement('span');
-            localTimeSpan.className = 'timestamp';
-            localTimeSpan.textContent = formatTimestamp(eventData.receivedAt);
-            localTimeSpan.title = '本地接收时间';
-            localTimeCell.appendChild(localTimeSpan);
-            
-            // Delay cell
-            const delayCell = document.createElement('td');
-            const delaySpan = document.createElement('span');
-            const blockTime = new Date(eventData.timestamp);
-            const receiveTime = new Date(eventData.receivedAt);
-            const delayMs = receiveTime - blockTime;
-            const delaySec = (delayMs / 1000).toFixed(2);
-            
-            delaySpan.className = 'delay';
-            delaySpan.textContent = `${delaySec}s`;
-            delaySpan.title = `延迟 ${delayMs} 毫秒`;
-            
-            // Color code based on delay
-            if (delayMs < 1000) {
-                delaySpan.style.color = '#10b981'; // Green - excellent
-            } else if (delayMs < 3000) {
-                delaySpan.style.color = '#3b82f6'; // Blue - good
-            } else if (delayMs < 5000) {
-                delaySpan.style.color = '#f59e0b'; // Orange - moderate
-            } else {
-                delaySpan.style.color = '#ef4444'; // Red - slow
-            }
-            delaySpan.style.fontWeight = '700';
-            delayCell.appendChild(delaySpan);
-            
-            // Transaction hash cell
-            const txCell = document.createElement('td');
-            const txSpan = document.createElement('span');
-            txSpan.className = 'tx-hash';
-            const txLink = document.createElement('a');
-            txLink.href = `https://bscscan.com/tx/${eventData.txHash}`;
-            txLink.target = '_blank';
-            txLink.textContent = shortenAddress(eventData.txHash);
-            txLink.title = eventData.txHash;
-            txSpan.appendChild(txLink);
-            txCell.appendChild(txSpan);
-            
-            row.appendChild(tokenCell);
-            row.appendChild(typeCell);
-            row.appendChild(addressCell);
-            row.appendChild(amountCell);
-            row.appendChild(blockTimeCell);
-            row.appendChild(localTimeCell);
-            row.appendChild(delayCell);
-            row.appendChild(txCell);
-            
-            eventsBody.insertBefore(row, eventsBody.firstChild);
-            
-            // Apply current filters to new row (skip for batch historical events)
-            if (!skipFilter) {
-                applyFilters();
-            }
-            
-            // Keep only last 100 events in display
-            while (eventsBody.children.length > 100) {
-                eventsBody.removeChild(eventsBody.lastChild);
-            }
-        }
-
-        function connectSSE() {
-            eventSource = new EventSource('/events');
-            
-            eventSource.onopen = () => {
-                statusDiv.textContent = '✓ 已连接';
-                statusDiv.className = 'status connected';
-            };
-            
-            eventSource.onmessage = (event) => {
-                const message = JSON.parse(event.data);
-                
-                if (message.type === 'stats') {
-                    updateStats(message.data);
-                } else if (message.type === 'history') {
-                    // Load historical events on page refresh
-                    const history = message.data;
-                    let totalEvents = 0;
-                    
-                    // Add USDC events
-                    if (history.usdc && history.usdc.length > 0) {
-                        history.usdc.forEach(eventData => {
-                            addEvent(eventData, true); // true = skip filter for batch add
-                            totalEvents++;
-                        });
-                    }
-                    
-                    // Add FUSDT events
-                    if (history.fusdt && history.fusdt.length > 0) {
-                        history.fusdt.forEach(eventData => {
-                            addEvent(eventData, true);
-                            totalEvents++;
-                        });
-                    }
-                    
-                    // Update stats after loading history
-                    updateStats(message.stats);
-                    statusDiv.textContent = `✓ 已连接 (恢复 ${totalEvents} 条历史记录)`;
-                    statusDiv.className = 'status connected';
-                } else if (message.type === 'event') {
-                    addEvent(message.data);
-                    updateStats(message.stats);
-                }
-            };
-            
-            eventSource.onerror = (error) => {
-                console.error('SSE 错误:', error);
-                statusDiv.textContent = '✗ 连接断开，尝试重连...';
-                statusDiv.className = 'status error';
-                eventSource.close();
-                setTimeout(connectSSE, 5000);
-            };
-        }
-
-        // Filter event listeners
-        filterUSDC.addEventListener('change', applyFilters);
-        filterFUSDT.addEventListener('change', applyFilters);
-        filterTransfer.addEventListener('change', applyFilters);
-        filterDeposit.addEventListener('change', applyFilters);
-        filterWithdraw.addEventListener('change', applyFilters);
-
-        // Initialize connection
-        connectSSE();
-    </script>
+    refreshState();
+    setInterval(refreshState, REFRESH_INTERVAL_MS);
+  </script>
 </body>
 </html>

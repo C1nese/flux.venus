@@ -1,12 +1,14 @@
 {
-  "name": "bsc-contract-monitor",
-  "version": "1.0.0",
-  "description": "BSC contract event monitor with SSE streaming",
+  "name": "flux-venus",
+  "version": "2.0.0",
+  "description": "Webhook-driven BSC contract monitor that works on Vercel serverless",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "check": "node --check server.js && node --check api/health.js && node --check api/state.js && node --check api/webhook.js && node --check lib/config.js && node --check lib/normalize.js && node --check lib/storage.js"
   },
   "dependencies": {
+    "@upstash/redis": "^1.37.0",
     "express": "^4.18.2",
     "ethers": "^6.9.0"
   }
